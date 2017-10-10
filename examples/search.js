@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+'use strict';
+
 const puppeteer = require('puppeteer');
 
 (async() => {
@@ -35,6 +37,6 @@ const links = await page.evaluate(() => {
   return anchors.map(anchor => anchor.textContent);
 });
 console.log(links.join('\n'));
-browser.close();
+await browser.close();
 
 })();

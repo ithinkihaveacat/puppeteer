@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+'use strict';
+
 const puppeteer = require('puppeteer');
 
 (async() => {
@@ -28,6 +30,6 @@ await page.pdf({
   format: 'letter'
 });
 
-browser.close();
+await browser.close();
 
 })();

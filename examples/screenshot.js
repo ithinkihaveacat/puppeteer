@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+'use strict';
+
 const puppeteer = require('puppeteer');
 
 (async() => {
@@ -23,6 +25,6 @@ const page = await browser.newPage();
 await page.goto('http://example.com');
 await page.screenshot({path: 'example.png'});
 
-browser.close();
+await browser.close();
 
 })();

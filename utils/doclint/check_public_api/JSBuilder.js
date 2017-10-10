@@ -15,20 +15,22 @@
  */
 
 const esprima = require('esprima');
-const ESTreeWalker = require('./ESTreeWalker');
+const ESTreeWalker = require('../../ESTreeWalker');
 const Documentation = require('./Documentation');
 
 class JSOutline {
   constructor(text) {
     this.classes = [];
+    /** @type {!Map<string, string>} */
+    this.inheritance = new Map();
     this.errors = [];
     this._eventsByClassName = new Map();
     this._currentClassName = null;
     this._currentClassMembers = [];
 
     this._text = text;
-    let ast = esprima.parseScript(this._text, {loc: true, range: true});
-    let walker = new ESTreeWalker(node => {
+    const ast = esprima.parseScript(this._text, {loc: true, range: true});
+    const walker = new ESTreeWalker(node => {
       if (node.type === 'ClassDeclaration')
         this._onClassDeclaration(node);
       else if (node.type === 'MethodDefinition')
@@ -44,14 +46,17 @@ class JSOutline {
   _onClassDeclaration(node) {
     this._flushClassIfNeeded();
     this._currentClassName = this._extractText(node.id);
+    const superClass = this._extractText(node.superClass);
+    if (superClass)
+      this.inheritance.set(this._currentClassName, superClass);
   }
 
   _onMethodDefinition(node) {
     console.assert(this._currentClassName !== null);
     console.assert(node.value.type === 'FunctionExpression');
-    let methodName = this._extractText(node.key);
+    const methodName = this._extractText(node.key);
     if (node.kind === 'get') {
-      let property = Documentation.Member.createProperty(methodName);
+      const property = Documentation.Member.createProperty(methodName);
       this._currentClassMembers.push(property);
       return;
     }
@@ -60,7 +65,7 @@ class JSOutline {
     // Extract properties from constructor.
     if (node.kind === 'constructor') {
       // Extract properties from constructor.
-      let walker = new ESTreeWalker(node => {
+      const walker = new ESTreeWalker(node => {
         if (node.type !== 'AssignmentExpression')
           return;
         node = node.left;
@@ -71,7 +76,7 @@ class JSOutline {
       });
       walker.walk(node);
     } else if (!hasReturn) {
-      let walker = new ESTreeWalker(node => {
+      const walker = new ESTreeWalker(node => {
         if (node.type === 'FunctionExpression' || node.type === 'FunctionDeclaration' || node.type === 'ArrowFunctionExpression')
           return ESTreeWalker.SkipSubtree;
         if (node.type === 'ReturnStatement')
@@ -80,19 +85,19 @@ class JSOutline {
       walker.walk(node.value.body);
     }
     const args = [];
-    for (let param of node.value.params) {
-      if (param.type === 'AssignmentPattern')
+    for (const param of node.value.params) {
+      if (param.type === 'AssignmentPattern' && param.left.name)
         args.push(new Documentation.Argument(param.left.name));
       else if (param.type === 'RestElement')
         args.push(new Documentation.Argument('...' + param.argument.name));
       else if (param.type === 'Identifier')
         args.push(new Documentation.Argument(param.name));
-      else if (param.type === 'ObjectPattern')
+      else if (param.type === 'ObjectPattern' || param.type === 'AssignmentPattern')
         args.push(new Documentation.Argument('options'));
       else
         this.errors.push(`JS Parsing issue: unsupported syntax to define parameter in ${this._currentClassName}.${methodName}(): ${this._extractText(param)}`);
     }
-    let method = Documentation.Member.createMethod(methodName, args, hasReturn, node.value.async);
+    const method = Documentation.Member.createMethod(methodName, args, hasReturn, node.value.async);
     this._currentClassMembers.push(method);
     return ESTreeWalker.SkipSubtree;
   }
@@ -108,7 +113,7 @@ class JSOutline {
       events = [];
       this._eventsByClassName.set(className, events);
     }
-    for (let property of node.right.properties) {
+    for (const property of node.right.properties) {
       if (property.type !== 'Property' || property.key.type !== 'Identifier' || property.value.type !== 'Literal')
         continue;
       events.push(Documentation.Member.createEvent(property.value.value));
@@ -118,7 +123,7 @@ class JSOutline {
   _flushClassIfNeeded() {
     if (this._currentClassName === null)
       return;
-    let jsClass = new Documentation.Class(this._currentClassName, this._currentClassMembers);
+    const jsClass = new Documentation.Class(this._currentClassName, this._currentClassMembers);
     this.classes.push(jsClass);
     this._currentClassName = null;
     this._currentClassMembers = [];
@@ -126,8 +131,8 @@ class JSOutline {
 
   _recreateClassesWithEvents() {
     this.classes = this.classes.map(cls => {
-      let events = this._eventsByClassName.get(cls.name) || [];
-      let members = cls.membersArray.concat(events);
+      const events = this._eventsByClassName.get(cls.name) || [];
+      const members = cls.membersArray.concat(events);
       return new Documentation.Class(cls.name, members);
     });
   }
@@ -135,9 +140,34 @@ class JSOutline {
   _extractText(node) {
     if (!node)
       return null;
-    let text = this._text.substring(node.range[0], node.range[1]).trim();
+    const text = this._text.substring(node.range[0], node.range[1]).trim();
     return text;
   }
+}
+
+/**
+ * @param {!Array<!Documentation.Class>} classes
+ * @param {!Map<string, string>} inheritance
+ * @return {!Array<!Documentation.Class>}
+ */
+function recreateClassesWithInheritance(classes, inheritance) {
+  const classesByName = new Map(classes.map(cls => [cls.name, cls]));
+  return classes.map(cls => {
+    const membersMap = new Map();
+    for (let wp = cls; wp; wp = classesByName.get(inheritance.get(wp.name))) {
+      for (const member of wp.membersArray) {
+        // Member was overridden.
+        const memberId = member.type + ':' + member.name;
+        if (membersMap.has(memberId))
+          continue;
+        // Do not inherit constructors
+        if (wp !== cls && member.name === 'constructor' && member.type === 'method')
+          continue;
+        membersMap.set(memberId, member);
+      }
+    }
+    return new Documentation.Class(cls.name, Array.from(membersMap.values()));
+  });
 }
 
 /**
@@ -145,14 +175,17 @@ class JSOutline {
  * @return {!Promise<{documentation: !Documentation, errors: !Array<string>}>}
  */
 module.exports = async function(sources) {
-  let classes = [];
-  let errors = [];
-  for (let source of sources) {
-    let outline = new JSOutline(source.text());
+  const classes = [];
+  const errors = [];
+  const inheritance = new Map();
+  for (const source of sources) {
+    const outline = new JSOutline(source.text());
     classes.push(...outline.classes);
     errors.push(...outline.errors);
+    for (const entry of outline.inheritance)
+      inheritance.set(entry[0], entry[1]);
   }
-  const documentation = new Documentation(classes);
+  const documentation = new Documentation(recreateClassesWithInheritance(classes, inheritance));
   return { documentation, errors };
 };
 
