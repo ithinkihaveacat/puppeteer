@@ -1,0 +1,17 @@
+{
+  "name": "foo",
+  "version": "1.0.0",
+  "main": "index.js",
+  "description": "foojj",
+  "license": "MIT",
+  "scripts": {
+    "start": "node index.js",
+    "printenv": "printenv",
+    "docker-build": "docker build -t $npm_package_name .",
+    "docker-run": "docker run --rm --mount source=screenshots,target=/screenshots $npm_package_name",
+    "docker-export": "docker run --rm --mount source=screenshots,target=/screenshots $npm_package_name sh -c 'tar cOzf - -C /screenshots .' > screenshots.tar.gz"
+  },
+  "dependencies": {
+    "puppeteer": "^1.0.0"
+  }
+}
