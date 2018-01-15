@@ -26,8 +26,8 @@ RUN groupadd -r luser && \
     chown -R luser:luser /home/luser && \
     mkdir -p /app && \
     chown -R luser:luser /app && \
-    mkdir -p /data && \
-    chown -R luser:luser /data
+    mkdir -p /app/data && \
+    chown -R luser:luser /app/data
 USER luser
 
 COPY . /app/

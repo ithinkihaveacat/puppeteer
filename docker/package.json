@@ -8,7 +8,7 @@
     "start": "node index.js",
     "printenv": "printenv",
     "docker-build": "docker build -t node-${npm_package_name} .",
-    "docker-run": "docker run --rm --mount type=bind,source=$(pwd)/data,target=/data node-${npm_package_name}"
+    "docker-run": "docker run --rm --mount type=bind,source=$(pwd)/data,target=/app/data node-${npm_package_name}"
   },
   "dependencies": {
     "puppeteer": "^1.0.0"
