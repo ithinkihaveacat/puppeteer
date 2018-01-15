@@ -12,11 +12,14 @@ const launchOptions = (() => {
 })();
 
 const puppeteer = require('puppeteer');
+const devices = require('puppeteer/DeviceDescriptors');
+const iPhone = devices['iPhone 6'];
 
 (async() => {
   const browser = await puppeteer.launch(launchOptions);
   const page = await browser.newPage();
-  await page.goto('https://example.com');
+  await page.emulate(iPhone);
+  await page.goto('https://www.washingtonpost.com/graphics/2018/lifestyle/oprah-for-president-the-highlights/');
 
   // Get the "viewport" of the page, as reported by the page.
   const dimensions = await page.evaluate(() => {
@@ -29,7 +32,7 @@ const puppeteer = require('puppeteer');
 
   console.log('Dimensions:', dimensions);
 
-  await page.screenshot({path: '/screenshots/example.png'});
+  await page.screenshot({path: '/data/example.png'});
 
   await browser.close();
 })();

@@ -8,8 +8,8 @@
     "start": "node index.js",
     "printenv": "printenv",
     "docker-build": "docker build -t $npm_package_name .",
-    "docker-run": "docker run --rm --mount source=screenshots,target=/screenshots $npm_package_name",
-    "docker-export": "docker run --rm --mount source=screenshots,target=/screenshots $npm_package_name sh -c 'tar cOzf - -C /screenshots .' > screenshots.tar.gz"
+    "docker-run": "docker run --rm --mount source=${npm_package_name}-data,target=/data $npm_package_name",
+    "docker-data-export": "docker run --rm --mount source=${npm_package_name}-data,target=/data $npm_package_name sh -c 'tar cOzf - -C /data .' > data.tar.gz"
   },
   "dependencies": {
     "puppeteer": "^1.0.0"
