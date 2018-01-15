@@ -19,7 +19,7 @@ const iPhone = devices['iPhone 6'];
   const browser = await puppeteer.launch(launchOptions);
   const page = await browser.newPage();
   await page.emulate(iPhone);
-  await page.goto('https://www.washingtonpost.com/graphics/2018/lifestyle/oprah-for-president-the-highlights/');
+  await page.goto('https://fuzzy-shame.glitch.me/', {waitUntil: 'networkidle0'});
 
   // Get the "viewport" of the page, as reported by the page.
   const dimensions = await page.evaluate(() => {

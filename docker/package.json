@@ -2,14 +2,13 @@
   "name": "foo",
   "version": "1.0.0",
   "main": "index.js",
-  "description": "foojj",
+  "description": "foo",
   "license": "MIT",
   "scripts": {
     "start": "node index.js",
     "printenv": "printenv",
-    "docker-build": "docker build -t $npm_package_name .",
-    "docker-run": "docker run --rm --mount source=${npm_package_name}-data,target=/data $npm_package_name",
-    "docker-data-export": "docker run --rm --mount source=${npm_package_name}-data,target=/data $npm_package_name sh -c 'tar cOzf - -C /data .' > data.tar.gz"
+    "docker-build": "docker build -t node-${npm_package_name} .",
+    "docker-run": "docker run --rm --mount type=bind,source=$(pwd)/data,target=/data node-${npm_package_name}"
   },
   "dependencies": {
     "puppeteer": "^1.0.0"
