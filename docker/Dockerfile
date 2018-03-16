@@ -1,11 +1,5 @@
 # Based on https://raw.githubusercontent.com/ebidel/try-puppeteer/master/backend/Dockerfile
 
-# Create puppeteer image:
-#
-# docker build -t puppeteer .
-#
-# 
-
 FROM node:8-slim
 
 LABEL maintainer="Michael Stillwell <mjs@beebo.org>"
@@ -26,8 +20,8 @@ RUN groupadd -r luser && \
     chown -R luser:luser /home/luser && \
     mkdir -p /app && \
     chown -R luser:luser /app && \
-    mkdir -p /app/data && \
-    chown -R luser:luser /app/data
+    mkdir -p /app/share && \
+    chown -R luser:luser /app/share
 USER luser
 
 COPY . /app/
